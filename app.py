@@ -24,17 +24,40 @@ st.markdown("""
     .sidebar .sidebar-content { background-image: linear-gradient(#2e7bcf,#2e7bcf); color: white; }
     .report-box { background-color: #ffffff; padding: 20px; border-right: 6px solid #007bff; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .credits-box { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.2); }
+    .stChatMessage { border-radius: 10px; padding: 10px; margin-bottom: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. وظائف معالجة البيانات والتصدير ---
+# --- 2. وظائف معالجة البيانات المتعددة (الجديدة) ---
+class MockMeta:
+    """كائن وهمي لمحاكاة الميتا داتا الخاصة بـ SPSS عند رفع ملفات CSV أو Excel"""
+    def __init__(self, columns):
+        self.column_names = columns
+        self.column_labels = columns  # في الإكسل، اسم العمود هو نفسه الوصف
+        self.variable_value_labels = {} # لا توجد تراجم رقمية في الإكسل عادة
+
 @st.cache_data
-def load_spss_data(file_bytes):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".sav") as tmp:
+def load_data(file_bytes, file_name):
+    file_extension = file_name.split('.')[-1].lower()
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_extension}") as tmp:
         tmp.write(file_bytes)
         tmp_path = tmp.name
-    df, meta = pyreadstat.read_sav(tmp_path)
-    os.remove(tmp_path)
+        
+    try:
+        if file_extension == 'sav':
+            df, meta = pyreadstat.read_sav(tmp_path)
+        elif file_extension == 'csv':
+            df = pd.read_csv(tmp_path)
+            meta = MockMeta(df.columns.tolist())
+        elif file_extension in ['xlsx', 'xls']:
+            df = pd.read_excel(tmp_path)
+            meta = MockMeta(df.columns.tolist())
+        else:
+            raise ValueError("صيغة الملف غير مدعومة")
+    finally:
+        os.remove(tmp_path)
+        
     return df, meta
 
 def to_excel(df):
@@ -68,58 +91,57 @@ with st.sidebar:
 
     st.divider()
     if st.button("🧹 مسح محادثة المساعد"):
-        st.session_state.messages = [{"role": "assistant", "content": "مرحباً دكتور قاسم! أنا مساعدك الذكي. ارفع ملف البيانات (SPSS) واطرح أي سؤال إحصائي وسأقوم بتحليله فوراً 📊"}]
+        st.session_state.messages = [{"role": "assistant", "content": "مرحباً دكتور قاسم! أنا مساعدك الذكي. ارفع ملفك (SPSS, Excel, CSV) واطرح أي سؤال وسأقوم بتحليله فوراً 📊"}]
         st.rerun()
 
 # --- 4. الجزء الرئيسي من المنصة (الدردشة والبيانات) ---
-st.title("📈 المنصة الذكية للتحليل الديموغرافي")
+st.title("📈 المنصة الذكية للتحليل الديموغرافي وإدارة البيانات")
 
 if api_keys:
     target_model = 'gemini-2.5-flash'
     
-    # 1. رفع الملف وعرض البيانات في الأعلى (داخل نافذة قابلة للطي)
-    uploaded_file = st.file_uploader("📂 ارفع ملف SPSS (.sav)", type=['sav'])
+    # تعديل زر الرفع ليقبل الصيغ الجديدة
+    uploaded_file = st.file_uploader("📂 ارفع قاعدة البيانات (يدعم: sav, csv, xlsx, xls)", type=['sav', 'csv', 'xlsx', 'xls'])
     
     df, meta = None, None
     if uploaded_file:
-        df, meta = load_spss_data(uploaded_file.getvalue())
+        df, meta = load_data(uploaded_file.getvalue(), uploaded_file.name)
         
         c1, c2, c3 = st.columns(3)
         c1.metric("عدد الحالات (Rows)", f"{df.shape[0]:,}")
         c2.metric("عدد المتغيرات (Cols)", df.shape[1])
-        c3.metric("المحرك الذكي", "Gemini 2.5 Flash")
+        c3.metric("نوع الملف", uploaded_file.name.split('.')[-1].upper())
 
         with st.expander("🔍 تصفح البيانات الخام ودليل المتغيرات (اضغط للفتح)", expanded=False):
-            tab1, tab2 = st.tabs(["البيانات الخام", "دليل المتغيرات"])
+            tab1, tab2 = st.tabs(["البيانات الخام", "دليل الأعمدة"])
             with tab1:
                 st.dataframe(df.head(10), use_container_width=True)
             with tab2:
-                meta_df = pd.DataFrame({"المتغير": meta.column_names, "الوصف": meta.column_labels})
+                # عرض الدليل بناءً على نوع الملف
+                meta_df = pd.DataFrame({"اسم العمود": meta.column_names, "الوصف": meta.column_labels})
                 st.dataframe(meta_df, use_container_width=True)
                 
     st.divider()
 
-    # 2. تهيئة ذاكرة المساعد الذكي
+    # تهيئة ذاكرة المساعد الذكي
     if "messages" not in st.session_state:
-        st.session_state.messages = [{"role": "assistant", "content": "مرحباً دكتور قاسم! أنا مساعدك الذكي. ارفع ملف البيانات (SPSS) واطرح أي سؤال إحصائي وسأقوم بتحليله فوراً 📊"}]
+        st.session_state.messages = [{"role": "assistant", "content": "مرحباً دكتور قاسم! أنا مساعدك الذكي. ارفع ملفك (SPSS, Excel, CSV) واطرح أي سؤال وسأقوم بتحليله فوراً 📊"}]
 
-    # 3. طباعة المحادثات السابقة
+    # طباعة المحادثات السابقة
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"], unsafe_allow_html=True)
 
-    # 4. مربع الدردشة العائم أسفل الشاشة
+    # مربع الدردشة العائم أسفل الشاشة
     if user_query := st.chat_input("✍️ اسأل المساعد عن أي تحليل تريده..."):
         
-        # طباعة سؤال المستخدم
         st.session_state.messages.append({"role": "user", "content": user_query})
         with st.chat_message("user"):
             st.markdown(user_query)
 
-        # تفكير المساعد وردّه
         with st.chat_message("assistant"):
             if df is None:
-                error_msg = "⚠️ يرجى رفع ملف البيانات (.sav) من الأعلى أولاً لأتمكن من تحليله."
+                error_msg = "⚠️ يرجى رفع ملف البيانات (sav, csv, excel) من الأعلى أولاً لأتمكن من تحليله."
                 st.warning(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
             else:
@@ -137,8 +159,8 @@ if api_keys:
                     التعليمات الصارمة:
                     1. 🚫 لا تنشئ أي بيانات وهمية. استخدم المتغير `df` مباشرة.
                     2. ⚠️ تأكد أن الأعمدة التي ستستخدمها موجودة في قائمة الأعمدة.
-                    3. استخدم `value_labels` لترجمة الأرقام قبل الرسم، مثال:
-                       if 'var_name' in value_labels:
+                    3. إذا كان القاموس `value_labels` يحتوي على تراجم، استخدمه لترجمة الأرقام قبل الرسم:
+                       if 'var_name' in value_labels and value_labels['var_name']:
                            df['var_name_label'] = df['var_name'].map(value_labels.get('var_name', {{}})).fillna(df['var_name'])
                     4. اكتب كود Python نظيف، وضع الكود بأكمله داخل علامات ```python و ```.
                     5. استخدم `st.dataframe()` للجدول و `st.bar_chart()` للرسم.
@@ -171,7 +193,7 @@ if api_keys:
                         if code_match:
                             st.subheader("📊 المخرجات التفاعلية:")
                             exec_env = globals().copy()
-                            exec_env.update({'df': df.copy(), 'pd': pd, 'st': st, 'value_labels': meta.variable_value_labels})
+                            exec_env.update({'df': df.copy(), 'pd': pd, 'st': st, 'value_labels': getattr(meta, 'variable_value_labels', {})})
                             
                             try:
                                 exec(code_match.group(1).strip(), exec_env)
