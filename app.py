@@ -15,27 +15,67 @@ st.set_page_config(page_title="BACFLIX - مختبر التحليل الديمو�
 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Kufi+Arabic:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+    
     :root {
-        --bacflix-red: #E50914;
-        --bg-dark: #0d1117;
+        --primary-blue: #1a4e8a; /* أزرق إحصائي رصين */
+        --accent-gold: #f1c40f;
+        --bg-light: #f4f7f9;
     }
+
     html, body, [class*="css"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, label {
-        font-family: 'Noto Kufi Arabic', sans-serif;
-        direction: rtl; text-align: right;
+        font-family: 'Cairo', sans-serif;
+        direction: rtl;
+        text-align: right;
     }
-    .stButton>button { 
-        background: #E50914; color: white; font-weight: bold; 
-        border-radius: 6px; transition: 0.3s; border: none;
+
+    /* تحسين الواجهة للجوال */
+    @media (max-width: 640px) {
+        .main .block-container { padding: 10px !important; }
+        .stMetric { margin-bottom: 10px !important; }
     }
-    .stButton>button:hover { background: #b80710; transform: translateY(-2px); }
-    .report-box { 
-        background: white; color: #111; padding: 2cm; 
-        border-radius: 4px; font-family: 'Amiri', serif; 
-        font-size: 18px; line-height: 2; border-right: 5px solid #E50914;
+
+    /* تصميم أزرار التحليل */
+    .stButton>button {
+        width: 100%;
+        background-color: var(--primary-blue);
+        color: white;
+        border-radius: 8px;
+        padding: 0.6rem;
+        border: none;
+        transition: 0.3s;
+        font-weight: 600;
+    }
+    .stButton>button:hover {
+        background-color: #12365f;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    .sidebar .sidebar-content { background: #161b22; color: white; }
+
+    /* ورقة النتائج الأكاديمية */
+    .report-card {
+        background: white;
+        padding: 25px;
+        border-right: 6px solid var(--primary-blue);
+        border-radius: 12px;
+        margin: 15px 0;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+        color: #2c3e50;
+        line-height: 1.8;
+    }
+
+    /* القائمة الجانبية */
+    [data-testid="stSidebar"] {
+        background-color: #0e2a47 !important;
+        color: white;
+    }
+    
+    .sidebar-info {
+        background: rgba(255,255,255,0.1);
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
