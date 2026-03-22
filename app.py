@@ -56,7 +56,7 @@ def save_key_to_cloud(new_key):
         if new_key in existing_keys:
             return False, "⚠️ المفتاح موجود مسبقاً في قاعدة بيانات المنصة."
         requests.post(f"{FIREBASE_DATABASE_URL}/gemini_keys.json", json=new_key)
-        return True, "✅ شكراً لك! تم دمج مفتاحك في خزانة الفريق لدعم المنصة."
+        return True, "✅ شكراً لك! تم دمج مفتاحك للعمل في المنصة."
     except Exception as e:
         return False, f"❌ خطأ في الاتصال بالسحابة: {e}"
 
@@ -153,7 +153,7 @@ if st.sidebar.button("🧹 تصفير جلسة التحليل"):
 # --- قسم مساهمة الباحثين والمفاتيح المشتركة ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🤝 مساهمة فريق البحث")
-st.sidebar.info("لضمان استمرارية المنصة للفريق، نرجو إدراج مفتاحك الخاص. سيتم تفعيله لجلستك وحفظه لدعم خزانة المنصة المشتركة.")
+st.sidebar.info("لضمان استمرارية المنصة للفريق، نرجو إدراج مفتاحك الخاص. سيتم تفعيله لتجنب الضغط على سيرفيرات المنصة .")
 
 st.sidebar.markdown("""
 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="text-decoration: none;">
@@ -202,7 +202,7 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if st.session_state.df is None:
     st.markdown("""
     <div class="info-box">
-        💡 <b>ملاحظة للزملاء الباحثين:</b> لضمان أفضل تجربة وأسرع استجابة، نرجو إضافة مفتاح API الخاص بكم في القائمة الجانبية لدعم جهود الفريق قبل رفع الملف.
+        💡 <b>ملاحظة للزملاء الباحثين:</b> لضمان أفضل تجربة وأسرع استجابة، نرجو إضافة مفتاح API الخاص بكم في القائمة الجانبية .
     </div>
     """, unsafe_allow_html=True)
 
