@@ -11,7 +11,7 @@ import scipy.stats as stats
 from docx import Document
 
 # --- 1. إعدادات الواجهة (مستوحاة من تصميم BACFLIX) ---
-st.set_page_config(page_title="BACFLIX - مختبر التحليل الديموغرافي", page_icon="📈", layout="wide")
+st.set_page_config(page_title=" مختبر التحليل الديموغرافي", page_icon="📈", layout="wide")
 
 st.markdown("""
 <style>
@@ -136,7 +136,7 @@ async def call_gemini_with_failover(prompt):
     return None
 
 # --- 4. واجهة المستخدم الرئيسية ---
-st.sidebar.title("📈 BACFLIX Analytics")
+st.sidebar.title("📈 المحلل الديموغرافي")
 st.sidebar.markdown(f"""
 <div class="credits-box">
         <h4>👨‍💻 تصميم وتطوير المنصة</h4>
