@@ -23,6 +23,7 @@ st.markdown("""
     .stDownloadButton>button { width: 100%; border-radius: 10px; height: 3em; background-color: #28a745; color: white; font-weight: bold; }
     .sidebar .sidebar-content { background-image: linear-gradient(#2e7bcf,#2e7bcf); color: white; }
     .report-box { background-color: #ffffff; padding: 25px; border-right: 6px solid #007bff; border-radius: 8px; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .credits-box { background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-top: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.2); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -42,13 +43,12 @@ def to_excel(df):
         df.to_excel(writer, index=True, sheet_name='النتائج_الإحصائية')
     return output.getvalue()
 
-# --- 3. إدارة المفاتيح الذكية (الخزنة السرية) ---
+# --- 3. إدارة المفاتيح الذكية (الخزنة السرية) وتصميم القائمة الجانبية ---
 api_keys = []
 
 with st.sidebar:
     st.title("⚙️ حالة النظام")
     
-    # التحقق مما إذا كانت المفاتيح مخزنة بأمان في سيرفر Streamlit
     if "API_KEYS" in st.secrets:
         api_keys = st.secrets["API_KEYS"]
         st.success(f"✅ المنصة متصلة بالسيرفر وجاهزة للعمل.\n(تم تحميل {len(api_keys)} مفاتيح للتبديل التلقائي)")
@@ -56,6 +56,16 @@ with st.sidebar:
         st.warning("الخزنة السرية غير متوفرة محلياً. يرجى إدخال المفاتيح:")
         api_keys_input = st.text_area("مفاتيح Google Gemini API:", type="password", height=100)
         api_keys = [k.strip() for k in api_keys_input.replace(',', '\n').split('\n') if k.strip()]
+        
+    # إضافة حقوق التصميم والتطوير للدكتور قاسم سمير
+    st.markdown("""
+    <div class="credits-box">
+        <h4>👨‍💻 تصميم وتطوير المنصة</h4>
+        <h3>الدكتور قاسم سمير</h3>
+        <p style="margin-bottom: 5px;">📧 <a href="mailto:esa.gacem@univ-blida2.dz" style="color: #ffdd57; text-decoration: none;">esa.gacem@univ-blida2.dz</a></p>
+        <p style="margin-bottom: 0;">📞 0672595801</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- 4. الجزء الرئيسي من المنصة ---
 st.title("📈 المنصة الذكية للتحليل الديموغرافي")
@@ -116,7 +126,6 @@ if api_keys:
                         response = None
                         success = False
                         
-                        # التبديل التلقائي بين المفاتيح (Failover)
                         for i, current_key in enumerate(api_keys):
                             try:
                                 client = genai.Client(api_key=current_key)
