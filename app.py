@@ -76,6 +76,18 @@ st.markdown("""
         text-align: center;
         margin-top: 10px;
     }
+    .stButton>button { 
+        background: #E50914; color: white; font-weight: bold; 
+        border-radius: 6px; transition: 0.3s; border: none;
+    }
+    .stButton>button:hover { background: #b80710; transform: translateY(-2px); }
+    .report-box { 
+        background: white; color: #111; padding: 2cm; 
+        border-radius: 4px; font-family: 'Amiri', serif; 
+        font-size: 18px; line-height: 2; border-right: 5px solid #E50914;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .sidebar .sidebar-content { background: #161b22; color: white; }
 </style>
 """, unsafe_allow_html=True)
 
