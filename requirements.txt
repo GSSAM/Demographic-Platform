@@ -4,3 +4,6 @@ pandas
 pyreadstat
 xlsxwriter
 openpyxl
+plotly
+python-docx
+scipy
