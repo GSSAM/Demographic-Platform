@@ -138,11 +138,12 @@ async def call_gemini_with_failover(prompt):
 # --- 4. واجهة المستخدم الرئيسية ---
 st.sidebar.title("📈 BACFLIX Analytics")
 st.sidebar.markdown(f"""
-<div style="background: #111; padding: 15px; border-radius: 8px; border: 1px solid #333;">
-    <h4 style="color: #E50914; margin:0;">أ. قاسم سمير</h4>
-    <small>إحصاء وتحليل ديموغرافي</small><br>
-    <small>0672595801</small>
-</div>
+<div class="credits-box">
+        <h4>👨‍💻 تصميم وتطوير المنصة</h4>
+        <h3>الدكتور قاسم سمير</h3>
+        <p>📧 <a href="mailto:esa.gacem@univ-blida2.dz" style="color: #ffdd57;">esa.gacem@univ-blida2.dz</a></p>
+        <p>📞 0672595801</p>
+    </div>
 """, unsafe_allow_html=True)
 
 if st.sidebar.button("🧹 مسح الذاكرة"):
