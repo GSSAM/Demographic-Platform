@@ -7,13 +7,3 @@ openpyxl
 plotly
 python-docx
 scipy
- tempfile
- os
- re
-BytesIO
- plotly.express 
-plotly.graph_objects
-scipy.stats
-numpy
-asyncio
-random
