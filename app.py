@@ -9,17 +9,17 @@ from io import BytesIO
 import plotly.express as px
 import scipy.stats as stats
 from docx import Document
+import asyncio
 
-# --- 1. إعدادات الواجهة (مستوحاة من تصميم BACFLIX) ---
-st.set_page_config(page_title=" مختبر التحليل الديموغرافي", page_icon="📈", layout="wide")
+# --- 1. إعدادات الواجهة الاحترافية (ستايل إحصائي + متوافق مع الجوال) ---
+st.set_page_config(page_title="المختبر الديموغرافي الذكي", page_icon="📊", layout="wide")
 
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
     
     :root {
-        --primary-blue: #1a4e8a; /* أزرق إحصائي رصين */
-        --accent-gold: #f1c40f;
+        --primary-blue: #1a4e8a;
         --bg-light: #f4f7f9;
     }
 
@@ -29,29 +29,14 @@ st.markdown("""
         text-align: right;
     }
 
-    /* تحسين الواجهة للجوال */
-    @media (max-width: 640px) {
-        .main .block-container { padding: 10px !important; }
-        .stMetric { margin-bottom: 10px !important; }
-    }
-
-    /* تصميم أزرار التحليل */
     .stButton>button {
         width: 100%;
         background-color: var(--primary-blue);
         color: white;
         border-radius: 8px;
-        padding: 0.6rem;
-        border: none;
-        transition: 0.3s;
         font-weight: 600;
     }
-    .stButton>button:hover {
-        background-color: #12365f;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
 
-    /* ورقة النتائج الأكاديمية */
     .report-card {
         background: white;
         padding: 25px;
@@ -60,161 +45,136 @@ st.markdown("""
         margin: 15px 0;
         box-shadow: 0 2px 15px rgba(0,0,0,0.05);
         color: #2c3e50;
-        line-height: 1.8;
     }
 
-    /* القائمة الجانبية */
     [data-testid="stSidebar"] {
         background-color: #0e2a47 !important;
         color: white;
     }
-    
-    .sidebar-info {
-        background: rgba(255,255,255,0.1);
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        margin-top: 10px;
-    }
-    .stButton>button { 
-        background: #E50914; color: white; font-weight: bold; 
-        border-radius: 6px; transition: 0.3s; border: none;
-    }
-    .stButton>button:hover { background: #b80710; transform: translateY(-2px); }
-    .report-box { 
-        background: white; color: #111; padding: 2cm; 
-        border-radius: 4px; font-family: 'Amiri', serif; 
-        font-size: 18px; line-height: 2; border-right: 5px solid #E50914;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .sidebar .sidebar-content { background: #161b22; color: white; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. وظائف المعالجة الذكية للملفات ---
-class MockMeta:
-    def __init__(self, columns):
-        self.column_names = columns; self.column_labels = columns; self.variable_value_labels = {}
+# --- 2. محرك الاتصال الماسي ---
+async def call_gemini_smart(prompt):
+    if "API_KEYS" not in st.secrets:
+        st.error("مفاتيح API غير متوفرة في الخزنة السرية.")
+        return None
+    
+    keys = list(st.secrets["API_KEYS"])
+    import random
+    random.shuffle(keys)
+    
+    for key in keys:
+        try:
+            client = genai.Client(api_key=key)
+            response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            return response
+        except Exception:
+            continue
+    return None
 
+# --- 3. وظائف معالجة البيانات ---
 @st.cache_data
-def load_data(file_bytes, file_name):
+def load_data_file(file_bytes, file_name):
     ext = file_name.split('.')[-1].lower()
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
         tmp.write(file_bytes); tmp_path = tmp.name
     try:
         if ext == 'sav': df, meta = pyreadstat.read_sav(tmp_path)
-        elif ext == 'csv': df, meta = pd.read_csv(tmp_path), MockMeta(pd.read_csv(tmp_path).columns.tolist())
-        else: df, meta = pd.read_excel(tmp_path), MockMeta(pd.read_excel(tmp_path).columns.tolist())
+        elif ext == 'csv': df = pd.read_csv(tmp_path); meta = None
+        else: df = pd.read_excel(tmp_path); meta = None
     finally:
         os.remove(tmp_path)
     return df, meta
 
-# --- 3. نظام الاتصال الماسي (مستنسخ من BACFLIX) ---
-# سيتم جلب المفاتيح من Secrets السيرفر كما في النسخة السابقة لضمان الأمان
-def get_api_client():
-    if "API_KEYS" not in st.secrets:
-        st.error("⚠️ لم يتم العثور على مفاتيح API في الخزنة السرية (Secrets).")
-        return None
-    return st.secrets["API_KEYS"]
-
-async def call_gemini_with_failover(prompt):
-    keys = get_api_client()
-    if not keys: return None
-    
-    import random
-    random.shuffle(keys) # خلط المفاتيح لتوزيع الضغط كما في كود BACFLIX
-    
-    target_model = "gemini-2.5-flash" # الموديل الموحد
-    
-    for key in keys:
-        try:
-            client = genai.Client(api_key=key)
-            response = client.models.generate_content(model=target_model, contents=prompt)
-            return response
-        except Exception:
-            continue # الانتقال للمفتاح التالي في حالة الفشل
-    return None
-
-# --- 4. واجهة المستخدم الرئيسية ---
-st.sidebar.title("📈 المحلل الديموغرافي")
+# --- 4. الهيكل الرئيسي للمنصة ---
 st.sidebar.markdown(f"""
-<div class="credits-box">
-        <h4>👨‍💻 تصميم وتطوير المنصة</h4>
-        <h3>الدكتور قاسم سمير</h3>
-        <p>📧 <a href="mailto:esa.gacem@univ-blida2.dz" style="color: #ffdd57;">esa.gacem@univ-blida2.dz</a></p>
-        <p>📞 0672595801</p>
-    </div>
+<div style="text-align: center; padding: 10px;">
+    <h3 style="color: white;">الدكتور قاسم سمير</h3>
+    <p style="color: #ccc;">مختبر التحليل الإحصائي</p>
+    <p style="font-size: 0.8em; color: #aaa;">0672595801</p>
+</div>
 """, unsafe_allow_html=True)
 
-if st.sidebar.button("🧹 مسح الذاكرة"):
+if st.sidebar.button("🧹 تصفير المحادثة"):
     st.session_state.messages = []
     st.rerun()
 
-st.title("🔬 المختبر الديموغرافي الذكي - BACFLIX")
+st.title("🔬 المختبر الإحصائي الذكي")
 
 uploaded_file = st.file_uploader("📂 ارفع ملف البيانات (SPSS, Excel, CSV)", type=['sav', 'csv', 'xlsx'])
 
 if uploaded_file:
-    df, meta = load_data(uploaded_file.getvalue(), uploaded_file.name)
+    df, meta = load_data_file(uploaded_file.getvalue(), uploaded_file.name)
     
-    # عرض إحصائيات سريعة
     col1, col2, col3 = st.columns(3)
-    col1.metric("إجمالي الحالات", f"{df.shape[0]:,}")
+    col1.metric("عدد العينات", f"{df.shape[0]:,}")
     col2.metric("المتغيرات", df.shape[1])
-    col3.metric("الحالة", "متصل بالسحابة ✅")
+    col3.metric("نوع الملف", uploaded_file.name.split('.')[-1].upper())
 
-    # نظام الدردشة المطور
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    # عرض تاريخ المحادثة
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"], unsafe_allow_html=True)
 
-    if user_query := st.chat_input("✍️ اطلب تحليلاً إحصائياً أو رسماً بيانياً..."):
+    if user_query := st.chat_input("اطلب تحليلاً إحصائياً أو رسماً بيانياً..."):
         st.session_state.messages.append({"role": "user", "content": user_query})
         with st.chat_message("user"): st.markdown(user_query)
 
         with st.chat_message("assistant"):
-            with st.spinner('جاري الاتصال بمحرك 2.5 Flash وتوليد التحليل...'):
-                meta_dict = dict(zip(meta.column_names, meta.column_labels))
+            with st.spinner('جاري التحليل وتوليد الرسوم...'):
+                # جلب أسماء الأعمدة والأوصاف (Labels)
+                meta_dict = {}
+                if meta and hasattr(meta, 'column_names'):
+                    meta_dict = dict(zip(meta.column_names, meta.column_labels))
                 
-                # توجيهات الأستاذ قاسم سمير الصارمة للموديل
-                full_prompt = f"""
-                أنت أستاذ خبير في التحليل الإحصائي والديموغرافي.
-                استخدم البيانات الحقيقية في `df`. الأعمدة: {list(df.columns)}. القاموس: {meta_dict}.
-                
+                prompt = f"""
+                أنت خبير إحصائي ديموغرافي. البيانات الحقيقية في `df`. الأعمدة: {list(df.columns)}. القاموس: {meta_dict}.
                 التعليمات:
-                1. طبق اختبارات الدلالة الإحصائية (P-value) عند المقارنة.
-                2. استخدم Plotly (px) للرسوم التفاعلية.
-                3. في جداول التكرار، أضف المجموع إجبارياً (margins=True).
-                4. استخدم LaTeX للمعادلات الإحصائية.
-                5. الكود يجب أن يكون داخل ```python ... ```.
-                
+                1. استخدم مكتبة Plotly (px) حصراً للرسم.
+                2. يجب أن ينتهي الكود دائماً بـ `st.plotly_chart(fig, use_container_width=True)`.
+                3. اشرح النتائج بأسلوب أكاديمي في بداية الرد.
+                4. ضع الكود البرمجي في نهاية الرد داخل ```python ... ```.
                 السؤال: {user_query}
                 """
                 
-                # استخدام دالة الـ Failover الماسية
-                import asyncio
-                response = asyncio.run(call_gemini_with_failover(full_prompt))
+                response = asyncio.run(call_gemini_smart(prompt))
                 
                 if response:
                     full_text = response.text
-                    report_text = re.sub(r"`{3}(?:python)?\s*(.*?)\s*`{3}", "", full_text, flags=re.DOTALL | re.IGNORECASE)
-                    code_match = re.search(r"`{3}(?:python)?\s*(.*?)\s*`{3}", full_text, re.DOTALL | re.IGNORECASE)
                     
-                    st.markdown(f'<div class="report-box">{report_text}</div>', unsafe_allow_html=True)
-                    st.session_state.messages.append({"role": "assistant", "content": report_text})
-
+                    # 1. استخراج الشرح (النص خارج كود بايثون)
+                    report_text = re.sub(r"```python.*?```", "", full_text, flags=re.DOTALL).strip()
+                    
+                    # 2. استخراج الكود البرمجي
+                    code_match = re.search(r"```python(.*?)```", full_text, re.DOTALL)
+                    
+                    # عرض الشرح في بطاقة أنيقة
+                    st.markdown(f'<div class="report-card">{report_text}</div>', unsafe_allow_html=True)
+                    
+                    # تنفيذ الكود لعرض الرسم البياني
                     if code_match:
-                        exec_env = globals().copy()
-                        exec_env.update({'df': df.copy(), 'pd': pd, 'st': st, 'px': px, 'stats': stats, 'value_labels': getattr(meta, 'variable_value_labels', {})})
+                        code_to_exec = code_match.group(1).strip()
+                        exec_env = {
+                            'df': df.copy(),
+                            'pd': pd,
+                            'px': px,
+                            'st': st,
+                            'stats': stats,
+                            'value_labels': getattr(meta, 'variable_value_labels', {}) if meta else {}
+                        }
                         try:
-                            exec(code_match.group(1).strip(), exec_env)
+                            # تنفيذ كود الرسم
+                            exec(code_to_exec, exec_env)
                         except Exception as e:
-                            st.error(f"خطأ في التنفيذ: {e}")
+                            st.error(f"حدث خطأ أثناء توليد الرسم: {e}")
+                    
+                    # حفظ الرد في التاريخ
+                    st.session_state.messages.append({"role": "assistant", "content": report_text})
                 else:
-                    st.error("❌ فشل الاتصال بجميع المفاتيح. يرجى التحقق من القوطة.")
-
+                    st.error("فشل الاتصال بالمحرك الذكي.")
 else:
-    st.info("👋 مرحباً بك في مختبر BACFLIX. يرجى رفع ملف البيانات للبدء في التحليل الإحصائي.")
+    st.info("👋 يرجى رفع ملف البيانات للبدء.")
