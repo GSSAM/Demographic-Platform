@@ -11,7 +11,7 @@ import scipy.stats as stats
 from docx import Document
 
 # --- 1. إعدادات الواجهة (مستوحاة من تصميم BACFLIX) ---
-st.set_page_config(page_title="BACFLIX - مختبر التحليل الديموغرافي", page_icon="📈", layout="wide")
+st.set_page_config(page_title=" مختبر التحليل الديموغرافي", page_icon="📈", layout="wide")
 
 st.markdown("""
 <style>
@@ -84,7 +84,7 @@ async def call_gemini_with_failover(prompt):
     return None
 
 # --- 4. واجهة المستخدم الرئيسية ---
-st.sidebar.title("📈 BACFLIX Analytics")
+st.sidebar.title("📈 المحلل الإحصائي الديموغرافي")
 st.sidebar.markdown(f"""
 <div style="background: #111; padding: 15px; border-radius: 8px; border: 1px solid #333;">
     <h4 style="color: #E50914; margin:0;">أ. قاسم سمير</h4>
@@ -97,7 +97,7 @@ if st.sidebar.button("🧹 مسح الذاكرة"):
     st.session_state.messages = []
     st.rerun()
 
-st.title("🔬 المختبر الديموغرافي الذكي - BACFLIX")
+st.title("🔬 المختبر الديموغرافي الذكي ")
 
 uploaded_file = st.file_uploader("📂 ارفع ملف البيانات (SPSS, Excel, CSV)", type=['sav', 'csv', 'xlsx'])
 
