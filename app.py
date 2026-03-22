@@ -242,20 +242,28 @@ if st.session_state.df is not None:
         with st.chat_message("user"): st.markdown(user_query)
 
         with st.chat_message("assistant"):
-            with st.spinner("🔄 جاري التحليل وصياغة التقرير الديموغرافي..."):
+            with st.spinner("🔄 جاري التحليل وصياغة التقرير..."):
                 prompt = f"""
-                أنت أستاذ ديموغرافيا وخبير إحصائي رفيع المستوى (Demographic & Statistical Expert). 
+                بناءً على الأعمدة والأوصاف المرفقة، قم بتحليل طبيعة البيانات أولاً:
+                إذا كانت البيانات تحتوي على متغيرات ديموغرافية أو اجتماعية (مثل العمر، الجنس، الإقامة، التعليم، الدخل، الحالة العائلية...):
+                - تصرف كأستاذ ديموغرافيا وخبير إحصائي رفيع المستوى.
+                - استخرج الدلالات العميقة واستخدم مصطلحات ديموغرافية (مثل: التباين المجالي، التركيب النوعي، الفوارق السوسيو-اقتصادية، الدلالة الإحصائية).
+                
+                أما إذا كانت البيانات عامة ولا تتعلق بالديموغرافيا (مثل مبيعات، بيانات تقنية، مالية، أو غيرها):
+                - تصرف كمحلل بيانات وخبير إحصائي محترف.
+                - ركز على استخراج الاتجاهات، العلاقات، والإحصاءات الوصفية والاستدلالية بدقة دون استخدام مصطلحات ديموغرافية في غير محلها.
+
                 البيانات متوفرة في المتغير `df`. 
-                الأعمدة: {list(df.columns)}. الأوصاف: {meta_dict}
+                الأعمدة: {list(df.columns)}. 
+                الأوصاف: {meta_dict}
 
-                التعليمات الصارمة:
-                1. **التفكير الديموغرافي:** استخرج الدلالات العميقة واستخدم مصطلحات ديموغرافية (التباين المجالي، التركيب النوعي، الفوارق السوسيو-اقتصادية، الدلالة الإحصائية).
-                2. **القراءة الأكاديمية:** ابدأ بالشرح النظري باللغة العربية بأسلوب علمي رصين قبل الكود.
-                3. **توليد الكود:** ضع الكود البرمجي حصراً داخل: ```python [الكود هنا] ```.
-                4. **أدوات العرض:** للجداول استخدم `st.dataframe()`. للرسوم استخدم `st.plotly_chart(fig, use_container_width=True)` عبر `px`.
-                5. **المجاميع:** في الجداول المتقاطعة أو التكرارية استخدم `margins=True, margins_name='المجموع'`.
+                التعليمات الصارمة والمشتركة:
+                1. **القراءة الأكاديمية/الاحترافية:** ابدأ دائماً بالشرح النظري وتحليل النتائج باللغة العربية بأسلوب علمي رصين قبل كتابة الكود.
+                2. **توليد الكود:** ضع الكود البرمجي حصراً داخل علامات: ```python [الكود هنا] ```.
+                3. **أدوات العرض:** لعرض الجداول استخدم `st.dataframe()`. لعرض الرسوم استخدم `st.plotly_chart(fig, use_container_width=True)` عبر مكتبة `px`.
+                4. **المجاميع:** في الجداول المتقاطعة أو التكرارية، استخدم دائماً `margins=True, margins_name='المجموع'`.
 
-                طلب الباحث: {user_query}
+                طلب المستخدم: {user_query}
                 """
                 
                 response_text = call_gemini_sync(prompt)
@@ -266,7 +274,7 @@ if st.session_state.df is not None:
                     
                     if report_text:
                         st.markdown(f'<div class="report-card">{report_text}</div>', unsafe_allow_html=True)
-                        st.download_button("📄 تحميل التقرير (Word)", data=export_to_word(report_text), file_name='Demographic_Analysis.docx', mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document', key=f"dl_{len(st.session_state.messages)}")
+                        st.download_button("📄 تحميل التقرير (Word)", data=export_to_word(report_text), file_name='Analysis_Report.docx', mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document', key=f"dl_{len(st.session_state.messages)}")
 
                     if code_matches:
                         for code in code_matches:
