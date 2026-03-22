@@ -42,127 +42,122 @@ def to_excel(df):
         df.to_excel(writer, index=True, sheet_name='النتائج_الإحصائية')
     return output.getvalue()
 
-# --- 3. القائمة الجانبية (Sidebar) ---
+# --- 3. إدارة المفاتيح الذكية (الخزنة السرية) ---
+api_keys = []
+
 with st.sidebar:
-    st.title("⚙️ الإعدادات")
-    api_key = st.text_input("مفتاح Google Gemini API:", type="password")
-    st.divider()
-    if api_key:
-        st.success("تم ربط الذكاء الاصطناعي (Gemini 2.5 Flash)")
+    st.title("⚙️ حالة النظام")
+    
+    # التحقق مما إذا كانت المفاتيح مخزنة بأمان في سيرفر Streamlit
+    if "API_KEYS" in st.secrets:
+        api_keys = st.secrets["API_KEYS"]
+        st.success(f"✅ المنصة متصلة بالسيرفر وجاهزة للعمل.\n(تم تحميل {len(api_keys)} مفاتيح للتبديل التلقائي)")
     else:
-        st.warning("يرجى إدخال مفتاح الـ API")
+        st.warning("الخزنة السرية غير متوفرة محلياً. يرجى إدخال المفاتيح:")
+        api_keys_input = st.text_area("مفاتيح Google Gemini API:", type="password", height=100)
+        api_keys = [k.strip() for k in api_keys_input.replace(',', '\n').split('\n') if k.strip()]
 
 # --- 4. الجزء الرئيسي من المنصة ---
 st.title("📈 المنصة الذكية للتحليل الديموغرافي")
 st.write("حلل قواعد بياناتك الإحصائية بلمحة بصر باستخدام قوة الذكاء الاصطناعي.")
 
-if api_key:
-    try:
-        # استخدام المكتبة الجديدة
-        client = genai.Client(api_key=api_key)
-        target_model = 'gemini-2.5-flash'
+if api_keys:
+    target_model = 'gemini-2.5-flash'
 
-        uploaded_file = st.file_uploader("📂 ارفع ملف SPSS (.sav)", type=['sav'], help="دعم كامل لملفات MICS وغيرها")
+    uploaded_file = st.file_uploader("📂 ارفع ملف SPSS (.sav)", type=['sav'], help="دعم كامل لملفات MICS وغيرها")
 
-        if uploaded_file:
-            df, meta = load_spss_data(uploaded_file.getvalue())
+    if uploaded_file:
+        df, meta = load_spss_data(uploaded_file.getvalue())
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("عدد الحالات (Rows)", f"{df.shape[0]:,}")
+        col2.metric("عدد المتغيرات (Cols)", df.shape[1])
+        col3.metric("المحرك الذكي", "Gemini 2.5 Flash")
+
+        tab1, tab2, tab3 = st.tabs(["🔍 استكشاف البيانات", "🤖 المساعد الذكي", "📋 دليل المتغيرات"])
+
+        with tab1:
+            st.dataframe(df.head(10), use_container_width=True)
+        
+        with tab3:
+            meta_df = pd.DataFrame({"المتغير": meta.column_names, "الوصف": meta.column_labels})
+            st.dataframe(meta_df, use_container_width=True)
+
+        with tab2:
+            user_query = st.text_area("✍️ ماذا تريد أن تعرف من هذه البيانات؟", 
+                                      placeholder="مثلاً: ما هو توزيع المستوى التعليمي حسب الجنس؟",
+                                      height=120)
             
-            col1, col2, col3 = st.columns(3)
-            col1.metric("عدد الحالات (Rows)", f"{df.shape[0]:,}")
-            col2.metric("عدد المتغيرات (Cols)", df.shape[1])
-            col3.metric("المحرك الذكي", "Gemini 2.5 Flash")
-
-            tab1, tab2, tab3 = st.tabs(["🔍 استكشاف البيانات", "🤖 المساعد الذكي", "📋 دليل المتغيرات"])
-
-            with tab1:
-                st.dataframe(df.head(10), use_container_width=True)
-            
-            with tab3:
-                meta_df = pd.DataFrame({"المتغير": meta.column_names, "الوصف": meta.column_labels})
-                st.dataframe(meta_df, use_container_width=True)
-
-            with tab2:
-                user_query = st.text_area("✍️ ماذا تريد أن تعرف من هذه البيانات؟", 
-                                          placeholder="مثلاً: ما هو توزيع المستوى التعليمي حسب الجنس؟",
-                                          height=120)
-                
-                if st.button("🚀 تنفيذ التحليل الذكي"):
-                    if user_query:
-                        with st.spinner('جاري البرمجة والتحليل بدقة...'):
-                            meta_dict = dict(zip(meta.column_names, meta.column_labels))
-                            
-                            # التوجيه الصارم لمنع الهلوسة وإجبار الموديل على بياناتك الحقيقية
-                            prompt = f"""
-                            أنت خبير تحليل بيانات عالمي ومبرمج Python محترف.
-                            
-                            البيئة الحالية:
-                            - DataFrame الحقيقي موجود وجاهز للاستخدام في المتغير `df`.
-                            - قائمة الأعمدة الفعلية الموجودة في البيانات هي: {list(df.columns)}
-                            - تفاصيل المتغيرات (الاسم: الوصف): {meta_dict}
-                            
-                            التعليمات الصارمة جداً:
-                            1. 🚫 لا تنشئ أي بيانات وهمية مطلقاً. استخدم المتغير `df` الموجود مباشرة.
-                            2. ⚠️ تأكد أن الأعمدة التي ستستخدمها موجودة في قائمة الأعمدة الفعلية المذكورة أعلاه.
-                            3. استخدم `value_labels` لترجمة الأرقام قبل الرسم عبر دالة آمنة، مثال:
-                               if 'var_name' in value_labels:
-                                   df['var_name_label'] = df['var_name'].map(value_labels.get('var_name', {{}})).fillna(df['var_name'])
-                            4. اكتب كود Python نظيف، وضع الكود بأكمله داخل علامات ```python و ```.
-                            5. استخدم `st.dataframe()` للجدول النهائي و `st.bar_chart()` لعرض النتائج بوضوح.
-                            
-                            طلب المستخدم: {user_query}
-                            """
-                            
-                            # الاستدعاء باستخدام المكتبة الأحدث
-                            response = client.models.generate_content(model=target_model, contents=prompt)
-                            
+            if st.button("🚀 تنفيذ التحليل الذكي"):
+                if user_query:
+                    with st.spinner('جاري البرمجة والتحليل بدقة...'):
+                        meta_dict = dict(zip(meta.column_names, meta.column_labels))
+                        
+                        prompt = f"""
+                        أنت خبير تحليل بيانات عالمي ومبرمج Python محترف.
+                        
+                        البيئة الحالية:
+                        - DataFrame الحقيقي موجود وجاهز للاستخدام في المتغير `df`.
+                        - قائمة الأعمدة الفعلية: {list(df.columns)}
+                        - تفاصيل المتغيرات: {meta_dict}
+                        
+                        التعليمات الصارمة:
+                        1. 🚫 لا تنشئ أي بيانات وهمية مطلقاً. استخدم المتغير `df` الموجود مباشرة.
+                        2. ⚠️ تأكد أن الأعمدة التي ستستخدمها موجودة في قائمة الأعمدة الفعلية أعلاه.
+                        3. استخدم `value_labels` لترجمة الأرقام قبل الرسم، مثال:
+                           if 'var_name' in value_labels:
+                               df['var_name_label'] = df['var_name'].map(value_labels.get('var_name', {{}})).fillna(df['var_name'])
+                        4. اكتب كود Python نظيف، وضع الكود بأكمله داخل علامات ```python و ```.
+                        5. استخدم `st.dataframe()` للجدول و `st.bar_chart()` للرسم.
+                        
+                        طلب المستخدم: {user_query}
+                        """
+                        
+                        response = None
+                        success = False
+                        
+                        # التبديل التلقائي بين المفاتيح (Failover)
+                        for i, current_key in enumerate(api_keys):
+                            try:
+                                client = genai.Client(api_key=current_key)
+                                response = client.models.generate_content(model=target_model, contents=prompt)
+                                success = True
+                                break
+                            except Exception:
+                                continue
+                        
+                        if success and response:
                             st.info("💡 رؤية المساعد واستنتاجاته:")
-                            
-                            # فصل النص عن الكود لعرض التقرير
                             full_text = response.text
                             report_text = re.sub(r"`{3}(?:python)?\s*(.*?)\s*`{3}", "", full_text, flags=re.DOTALL | re.IGNORECASE)
                             st.markdown(f'<div class="report-box">{report_text}</div>', unsafe_allow_html=True)
                             
-                            # كتابة التعبير النمطي بأسلوب محصن ضد أخطاء السطور والنسخ (تم حل مشكلة SyntaxError)
                             regex_pattern = r"`{3}(?:python)?\s*(.*?)\s*`{3}"
                             code_match = re.search(regex_pattern, full_text, re.DOTALL | re.IGNORECASE)
                             
                             if code_match:
                                 st.subheader("📊 المخرجات التفاعلية:")
-                                
-                                # الدمج الذكي لبيئة التنفيذ لمنع خطأ اختفاء المتغيرات (تم حل مشكلة Scope Error)
                                 exec_env = globals().copy()
-                                exec_env.update({
-                                    'df': df.copy(), 
-                                    'pd': pd, 
-                                    'st': st, 
-                                    'value_labels': meta.variable_value_labels
-                                })
+                                exec_env.update({'df': df.copy(), 'pd': pd, 'st': st, 'value_labels': meta.variable_value_labels})
                                 
                                 try:
                                     exec(code_match.group(1).strip(), exec_env)
                                     
-                                    # محرك استخراج الجداول لزر التحميل Excel
                                     for var_name, var_value in list(exec_env.items()):
                                         if isinstance(var_value, pd.DataFrame) and var_name != 'df' and not var_name.startswith('_'):
                                             st.divider()
                                             excel_data = to_excel(var_value)
-                                            st.download_button(
-                                                label="📥 تحميل الجدول الناتج (Excel)",
-                                                data=excel_data,
-                                                file_name='analysis_results.xlsx',
-                                                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                                            )
-                                            break # زر تحميل لجدول واحد يكفي لتجنب التكرار
-                                            
+                                            st.download_button("📥 تحميل الجدول الناتج (Excel)", data=excel_data, file_name='analysis_results.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                                            break
                                 except Exception as code_error:
                                     st.error(f"حدث خطأ برمجي أثناء تحليل بياناتك: {code_error}")
-                                    with st.expander("🔍 عرض الكود الذي تسبب في الخطأ لمراجعته"):
+                                    with st.expander("🔍 عرض الكود للمراجعة"):
                                         st.code(code_match.group(1).strip(), language='python')
                             else:
-                                st.warning("لم يقم المساعد بتوليد كود قابل للتنفيذ هذه المرة. يرجى إعادة صياغة السؤال.")
-                    else:
-                        st.warning("يرجى كتابة سؤال أولاً.")
-    except Exception as e:
-        st.error(f"حدث خطأ في النظام: {e}")
+                                st.warning("لم يقم المساعد بتوليد كود قابل للتنفيذ هذه المرة.")
+                        else:
+                            st.error("❌ نعتذر، جميع المفاتيح استنفدت الحصة المتاحة (Quota). يرجى تحديث الخزنة بمفاتيح جديدة.")
+                else:
+                    st.warning("يرجى كتابة سؤال أولاً.")
 else:
-    st.info("👈 ابدأ بإدخال مفتاح API في القائمة الجانبية.")
+    st.info("👈 المنصة بانتظار تحميل المفاتيح للبدء.")
